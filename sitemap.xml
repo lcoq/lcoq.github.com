@@ -1,15 +1,19 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
+        <loc>http://lcoq.github.com/blog/2013/02/03/ember-dot-js-dig-into-the-container/</loc>
+        <lastmod>2013-02-13T15:46:08+01:00</lastmod>
+    </url>
+    <url>
         <loc>http://lcoq.github.com/robots.txt</loc>
         <lastmod>2013-02-02T17:17:04+01:00</lastmod>
     </url>
     <url>
         <loc>http://lcoq.github.com/blog/archives/</loc>
-        <lastmod>2013-02-02T17:17:04+01:00</lastmod>
+        <lastmod>2013-02-13T15:46:08+01:00</lastmod>
     </url>
     <url>
         <loc>http://lcoq.github.com/</loc>
-        <lastmod>2013-02-02T17:17:04+01:00</lastmod>
+        <lastmod>2013-02-13T15:46:08+01:00</lastmod>
     </url>
 </urlset>

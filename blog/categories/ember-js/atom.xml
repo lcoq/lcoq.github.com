@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Ember.js | lcoq]]></title>
+  <link href="http://lcoq.github.com/blog/categories/ember-js/atom.xml" rel="self"/>
+  <link href="http://lcoq.github.com/"/>
+  <updated>2013-02-13T15:46:09+01:00</updated>
+  <id>http://lcoq.github.com/</id>
+  <author>
+    <name><![CDATA[Louis Coquio]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Ember.js: Dig into the Container]]></title>
+    <link href="http://lcoq.github.com/blog/2013/02/03/ember-dot-js-dig-into-the-container/"/>
+    <updated>2013-02-03T21:34:00+01:00</updated>
+    <id>http://lcoq.github.com/blog/2013/02/03/ember-dot-js-dig-into-the-container</id>
+    <content type="html"><![CDATA[<p>If you are a little curious, or have already took a look at the Ember.js source code, you
+have probably seen then <code>container</code> package, or maybe the <code>__container__</code> property of an
+application.</p>
+
+<p>This post tries to explain what is it, and how it works, but its main purpose is to keep a trace of my research; you'll find these informations easily by reading its code.</p>
+
+<h2>What is a <code>Container</code> ?</h2>
+
+<p>As you can imagine, the purpose of a <code>Container</code> is to contain something, but what? In fact, it
+could be anything, but most of the time, it will be <strong>factories</strong>, ie Ember classes, since a
+class is an instance factory.</p>
+
+<p>Basically, we can do three things with a <code>Container</code>:</p>
+
+<ul>
+<li><p>Register factories. They are defined with a <code>fullName</code>: a type and a name, joined by a colon.
+For example, in Ember, a <code>PostsController</code> is registered in a container as <code>controller:posts</code>.</p></li>
+<li><p>Look up objects. If a factory was previously registered with both type and name matching
+those passed to <code>lookup</code>, it returns an instance of this factory.</p></li>
+<li><p>Check if the factory is registered in the container.</p></li>
+</ul>
+
+
+<p><em>Note: You will see at the end of this post that containers can also just register objects instead
+of factories, and return them as they were registered.</em></p>
+
+<h3>Example</h3>
+
+<p>Given a <code>PostsController</code> class, and a <code>container</code>,  defined as follows:</p>
+
+<p><code>js
+App.PostsController = Ember.ArrayController.extend();
+var container = new Container();
+</code></p>
+
+<p>We can register the <code>PostsController</code> like this:</p>
+
+<p><code>js
+container.register('controller:posts', App.PostsController);
+</code></p>
+
+<p>We could verify the factory is well registered by calling the <code>has</code> method:</p>
+
+<p><code>js
+container.has('controller:posts'); // =&gt; true
+</code></p>
+
+<p>And then look up <code>controller:posts</code>. It will return a instance of the <code>App.PostsController</code> class:</p>
+
+<p><code>js
+var postsController = container.lookup('controller:posts');
+App.PostsController.detectInstance(postsController); // =&gt; true
+</code></p>
+
+<p>Here is the most basic usage of the <code>Container</code>.
+It's time to talk about relationship.</p>
+
+<h2>Relationship</h2>
+
+<p>A container can have children: it has a method <code>child()</code> that generates a new child each time this
+method is called. But the powerful of this relationship is that a child has a parent, not children:</p>
+
+<p>If a container does not register the factory you're looking for, it tries to <strong>find it in its
+parent.</strong></p>
+
+<p>Containers have other features like resolvers, singletons and injections. They also works the same
+way with the parent container.</p>
+
+<h2>Singletons</h2>
+
+<p>Assuming a factory is registered in a container, when calling <code>lookup</code> with its name, it:</p>
+
+<ul>
+<li>Search in its cache or its parent cache if an instance of this factory already exist, and
+return then if so</li>
+<li>Else, instantiate an object from this factory, unless <code>instantiate</code> option is set to <code>false</code></li>
+<li>Store it in the cache, unless <code>singleton</code> option is set to <code>false</code></li>
+</ul>
+
+
+<p>Given the <code>PostsController</code> registered in the example above, we have:</p>
+
+<p><code>js
+container.lookup('controller:posts') ==== controller.lookup('controller:posts'); // =&gt; true
+</code></p>
+
+<p>As the cache also works with the parent container, It implies that if you create an item with the
+parent container, and then try to get an item of the factory with one of its child, you will get
+the object already created by its parent.</p>
+
+<h2>Injections</h2>
+
+<p>Containers can define injections. This is a way to inject properties into factories instances.
+There are two kinds of injection:</p>
+
+<ul>
+<li>By type - It injects properties to all factories that have the same type (e.g. for those starting
+by <code>controller:</code>)</li>
+<li>By factory - In injects properties only in the factory that matches the name specified</li>
+</ul>
+
+
+<p>This is pretty easy to use, take a look with these factories:</p>
+
+<p><code>js
+container.register('controller:post', App.PostController);
+container.register('controller:comments', App.CommentsController);
+container.register('store:main', App.Store);
+</code></p>
+
+<p>We can define injections like this:</p>
+
+<p><code>js
+container.typeInjection('controller', 'store', 'store:main');
+container.injection('controller:post', 'comments', 'controller:comments');
+</code></p>
+
+<p>The first (type) injection will set the <code>store</code> property as the <code>store:main</code> instance of each <code>controller</code> factories instances:</p>
+
+<p><code>js
+var store1 = container.lookup('controller:post').get('store');
+var store2 = container.lookup('controller:comments').get('store');
+store1 === store2 === container.lookup('store:main');
+</code></p>
+
+<p>The second injection will set the <code>comments</code> property as the <code>controller:comments</code>
+instance of the <code>controller:post</code> instances:</p>
+
+<p><code>js
+var commentsController = container.lookup('controller:post').get('comments');
+commentsController === container.lookup('controller:comments');
+</code></p>
+
+<h2>Resolver</h2>
+
+<p>A container can have a <code>resolver</code>. This is basically a hook called when <code>lookup</code> is called, before
+the container starts to search the factory in its registry. It will stop its search if the resolver
+returned something.</p>
+
+<p>It can be useful when the factory you are looking for is not defined in the container, so you can
+resolve factories lazily:</p>
+
+<p>```js
+var MyPostsController = Ember.ArrayController.extend();
+container.resolver = function(fullName) {
+  if (fullName === 'controller:posts') {</p>
+
+<pre><code>return MyPostsController;
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>Note that resolvers are also inherited from parent containers.</p>
+
+<h2>In Ember</h2>
+
+<p>When you create an <code>Ember.Application</code>, it creates a container that will store all controllers,
+views, templates, routes, the router and the application itself.</p>
+
+<h3>Options and injections</h3>
+
+<p>Some ovious options are defined when the application build this container:</p>
+
+<ul>
+<li><code>view</code> factories are not singletons</li>
+<li><code>template</code> cannot be instantiated</li>
+<li><code>application:main</code> cannot be instantiated (this is already an instance of <code>Ember.Application</code>)</li>
+</ul>
+
+
+<p>Then, some injections are defined:</p>
+
+<ul>
+<li>The <code>router:main</code> is injected in controllers as <code>target</code>, and in routes as <code>router</code></li>
+<li>The <code>application:main</code> is injected in controllers as <code>namespace</code></li>
+</ul>
+
+
+<p><em>Note: Ember-Data add other injections in an application initializer: the <code>store</code> is injected in
+controllers and routes <code>store</code>.</em></p>
+
+<h3>Resolver</h3>
+
+<p>The <code>Ember.Application</code> container resolver does two things:</p>
+
+<ul>
+<li>Search templates in <code>Ember.TEMPLATES</code></li>
+<li>Lookup in the Application the factory that matches the fullname, eg for <code>type:factory</code>, it will
+looks up <code>App.FactoryType</code>. That's how Ember conventions works!</li>
+</ul>
+
+
+<h3>Add some extra</h3>
+
+<p>An <code>Ember.Application</code> has two public methods that are defined for interacting with the container:
+<code>register</code> and <code>inject</code>. They just forward the call to the same method of the container, but they
+are <strong>public</strong>, so they can be used by us :)</p>
+
+<h2>Limitations</h2>
+
+<p>As controllers are singleton in Ember, some features does not work well at this time. This is the
+case of the new handlebar helpers <code>render</code> and <code>control</code>.</p>
+
+<p>Basically, the <code>control</code> helper render the named template in the current context using an
+instance of the same-named controller. A model can be passed to this helper.</p>
+
+<p>When a <code>control</code> helper is computed, it:</p>
+
+<ul>
+<li>Generates a <code>child</code> of the current controllers container</li>
+<li>Lookup the controller and the template that matches the name passed to control in this child.</li>
+</ul>
+
+
+<p>Normally, <code>control</code> could be used multiple times with the same name.</p>
+
+<p>In fact, it cannot work because when the <code>control</code> is rendered a second time, lookup the
+controller will return the controller which was instantiated on the first control. So the
+first model will be destroyed in favor of the last control model.</p>
+
+<p>That's why there could be something new in containers: <strong>scopes</strong>. I suggest you to take a look at
+<em>@ghempton</em> comments in <a href="https://github.com/emberjs/ember.js/pull/1968#issuecomment-13137494">emberjs/emberjs#1968</a> if you want to know more.</p>
+]]></content>
+  </entry>
+  
+</feed>
