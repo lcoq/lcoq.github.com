@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Ember.js | lcoq]]></title>
   <link href="http://lcoq.github.com/blog/categories/ember-js/atom.xml" rel="self"/>
   <link href="http://lcoq.github.com/"/>
-  <updated>2013-02-13T15:46:09+01:00</updated>
+  <updated>2013-02-13T16:03:41+01:00</updated>
   <id>http://lcoq.github.com/</id>
   <author>
     <name><![CDATA[Louis Coquio]]></name>
@@ -221,7 +221,7 @@ are <strong>public</strong>, so they can be used by us :)</p>
 <h2>Limitations</h2>
 
 <p>As controllers are singleton in Ember, some features does not work well at this time. This is the
-case of the new handlebar helpers <code>render</code> and <code>control</code>.</p>
+case of the new handlebar helpers <code>\</code> and <code>control</code>.</p>
 
 <p>Basically, the <code>control</code> helper render the named template in the current context using an
 instance of the same-named controller. A model can be passed to this helper.</p>
