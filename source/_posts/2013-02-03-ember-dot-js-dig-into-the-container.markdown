@@ -10,26 +10,44 @@ If you are a little curious, or have already took a look at the Ember.js source 
 have probably seen then `container` package, or maybe the `__container__` property of an 
 application.
 
-This post tries to explain what is it, and how it works, but its main purpose is to keep a trace of 
-my research.
+This post tries to explain what is it and how it works. I decided to write this article because I
+wanted to keep a trace of my research.
 
-## What is a `Container` ?
+## Why a `Container` ?
 
-As you can imagine, the purpose of a `Container` is to contain something, but what? In fact, it
-could be anything, but most of the time, it will be **factories**, ie Ember classes, since a
-class is an instance factory.
+Firstly, we have to know why is there a `container` in the Ember.js source code. Yehuda Katz 
+clearly explains it:
+
+{% blockquote Yehuda Katz http://stackoverflow.com/questions/14085749/what-is-the-purpose-of-the-ember-container What is the purpose of the Ember container (StackOverflow) %}
+The goal of the container is to provide a more general-purpose mechanism for describing module 
+dependencies than the ad-hoc approach we had been using.
+
+For example, imagine you want to find the controller for the post route. The default Ember rules 
+are that we would look it up as App.PostController. Before the container, we would just hardcode 
+those rules wherever we needed to do the lookup (using classify and friends).
+
+The container provides a way for us to define those rules in a single place. As a bonus, the rules 
+can be overridden for applications that want a different convention.
+{% endblockquote %}
+
+*Note: It is intended for **internal use only**, as [Yehuda Katz explained](http://goo.gl/dA2mE).*
+
+## So, what is a `Container` ?
+
+As you can imagine, the purpose of a `Container` is to contain something. It could be anything, but
+most of the time, it will be **factories**, (eg Ember classes, since a class is an instance factory).
 
 Basically, we can do three things with a `Container`:
 
-- Register factories. They are defined with a `fullName`: a type and a name, joined by a colon. 
+- Register factories. They are defined with a `fullName`: a type and a name, joined by a colon.
 For example, in Ember, a `PostsController` is registered in a container as `controller:posts`.
 
-- Look up objects. If a factory was previously registered with both type and name matching
-those passed to `lookup`, it returns an instance of this factory.
+- Look up objects. If a factory was previously registered with both type and name matching 
+those passed to the `lookup` method, it returns an instance of this factory.
 
 - Check if the factory is registered in the container.
 
-*Note: Containers can also just register objects instead of factories. The only consequence is that 
+*Note: Containers can also just register objects instead of factories. The only change is that 
 they are returned as they were registered.*
 
 ### Example
@@ -186,26 +204,27 @@ looks up `App.FactoryType`. That's how Ember conventions works!
 
 An `Ember.Application` has two public methods that are defined for interacting with the container:
 `register` and `inject`. They just forward the call to the same method of the container, but they
-are **public**, so they can be used by us :)
+are **public** :)
 
 ## Limitations
 
 As controllers are singleton in Ember, some features does not work well at this time. This is the
-case of the new handlebar helpers `render` and `control`.
+case of the new handlebar helpers {% raw %}`{{render}}` {% endraw %} and 
+{% raw %}`{{control}}`{% endraw %}.
 
-Basically, the `control` helper render the named template in the current context using an 
-instance of the same-named controller. A model can be passed to this helper.
+Basically, the {% raw %}`{{control}}`{% endraw %} helper render the named template in the current 
+context using an instance of the same-named controller. A model can be passed to this helper.
 
-When a `control` helper is computed, it:
+When a {% raw %}`{{control}}`{% endraw %} helper is computed, it:
 
 * Generates a `child` of the current controllers container
 * Lookup the controller and the template that matches the name passed to control in this child.
 
-Normally, `control` could be used multiple times with the same name.
+Normally, {% raw %}`{{control}}`{% endraw %} could be used multiple times with the same name.
 
-In fact, it cannot work because when the `control` is rendered a second time, lookup the controller
-will return the controller which was instantiated on the first control. So the first model will be
-destroyed in favor of the last control model.
+In fact, it cannot work because when the {% raw %}`{{control}}`{% endraw %} is rendered a second 
+time, looking up the controller will return the controller which was instantiated on the first 
+control. So the first model will be destroyed in favor of the last control model.
 
 That's why a new feature could appear in containers: **scopes**. I suggest you to take a look at
 *@ghempton* comments in [emberjs/emberjs#1968](https://github.com/emberjs/ember.js/pull/1968#issuecomment-13137494) if you want to know more.
