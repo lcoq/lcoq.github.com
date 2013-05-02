@@ -4,7 +4,7 @@
   <title><![CDATA[lcoq]]></title>
   <link href="http://lcoq.github.com/atom.xml" rel="self"/>
   <link href="http://lcoq.github.com/"/>
-  <updated>2013-02-13T16:03:41+01:00</updated>
+  <updated>2013-05-02T18:03:32+02:00</updated>
   <id>http://lcoq.github.com/</id>
   <author>
     <name><![CDATA[Louis Coquio]]></name>
@@ -22,13 +22,23 @@
 have probably seen then <code>container</code> package, or maybe the <code>__container__</code> property of an
 application.</p>
 
-<p>This post tries to explain what is it, and how it works, but its main purpose is to keep a trace of my research; you&#8217;ll find these informations easily by reading its code.</p>
+<p>This post tries to explain what is it and how it works. I decided to write this article because I
+wanted to keep a trace of my research.</p>
 
-<h2>What is a <code>Container</code> ?</h2>
+<h2>Why a <code>Container</code> ?</h2>
 
-<p>As you can imagine, the purpose of a <code>Container</code> is to contain something, but what? In fact, it
-could be anything, but most of the time, it will be <strong>factories</strong>, ie Ember classes, since a
-class is an instance factory.</p>
+<p>Firstly, we have to know why is there a <code>container</code> in the Ember.js source code. Yehuda Katz
+clearly explains it:</p>
+
+<blockquote><p>The goal of the container is to provide a more general-purpose mechanism for describing module <br/>dependencies than the ad-hoc approach we had been using.</p><p>For example, imagine you want to find the controller for the post route. The default Ember rules <br/>are that we would look it up as App.PostController. Before the container, we would just hardcode <br/>those rules wherever we needed to do the lookup (using classify and friends).</p><p>The container provides a way for us to define those rules in a single place. As a bonus, the rules <br/>can be overridden for applications that want a different convention.</p><footer><strong>Yehuda Katz</strong> <cite><a href='http://stackoverflow.com/questions/14085749/what-is-the-purpose-of-the-ember-container'>What Is the Purpose of the Ember Container (StackOverflow)</a></cite></footer></blockquote>
+
+
+<p><em>Note: It is intended for <strong>internal use only</strong>, as <a href="http://goo.gl/dA2mE">Yehuda Katz explained</a>.</em></p>
+
+<h2>So, what is a <code>Container</code> ?</h2>
+
+<p>As you can imagine, the purpose of a <code>Container</code> is to contain something. It could be anything, but
+most of the time, it will be <strong>factories</strong>, (eg Ember classes, since a class is an instance factory).</p>
 
 <p>Basically, we can do three things with a <code>Container</code>:</p>
 
@@ -36,13 +46,13 @@ class is an instance factory.</p>
 <li><p>Register factories. They are defined with a <code>fullName</code>: a type and a name, joined by a colon.
 For example, in Ember, a <code>PostsController</code> is registered in a container as <code>controller:posts</code>.</p></li>
 <li><p>Look up objects. If a factory was previously registered with both type and name matching
-those passed to <code>lookup</code>, it returns an instance of this factory.</p></li>
+those passed to the <code>lookup</code> method, it returns an instance of this factory.</p></li>
 <li><p>Check if the factory is registered in the container.</p></li>
 </ul>
 
 
-<p><em>Note: You will see at the end of this post that containers can also just register objects instead
-of factories, and return them as they were registered.</em></p>
+<p><em>Note: Containers can also just register objects instead of factories. The only change is that
+they are returned as they were registered.</em></p>
 
 <h3>Example</h3>
 
@@ -97,9 +107,8 @@ way with the parent container.</p>
 <p>Assuming a factory is registered in a container, when calling <code>lookup</code> with its name, it:</p>
 
 <ul>
-<li>Search in its cache or its parent cache if an instance of this factory already exist, and
-return then if so</li>
-<li>Else, instantiate an object from this factory, unless <code>instantiate</code> option is set to <code>false</code></li>
+<li>Search in its cache or its parent cache if an instance of this factory already exist</li>
+<li>Instantiate an object from this factory, unless <code>instantiate</code> option is set to <code>false</code></li>
 <li>Store it in the cache, unless <code>singleton</code> option is set to <code>false</code></li>
 </ul>
 
@@ -147,7 +156,8 @@ by <code>controller:</code>)</li>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>The first (type) injection will set the <code>store</code> property as the <code>store:main</code> instance of each <code>controller</code> factories instances:</p>
+<p>The first (type) injection will set the <code>store</code> property as the <code>store:main</code> instance of each
+<code>controller</code> factories instances:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -232,21 +242,22 @@ looks up <code>App.FactoryType</code>. That&#8217;s how Ember conventions works!
 </ul>
 
 
-<h3>Add some extra</h3>
+<h3>Interact with the application container</h3>
 
 <p>An <code>Ember.Application</code> has two public methods that are defined for interacting with the container:
 <code>register</code> and <code>inject</code>. They just forward the call to the same method of the container, but they
-are <strong>public</strong>, so they can be used by us :)</p>
+are <strong>public</strong> :)</p>
 
 <h2>Limitations</h2>
 
 <p>As controllers are singleton in Ember, some features does not work well at this time. This is the
-case of the new handlebar helpers <code>\</code> and <code>control</code>.</p>
+case of the new handlebar helpers <code>{{render}}</code>  and
+<code>{{control}}</code>.</p>
 
-<p>Basically, the <code>control</code> helper render the named template in the current context using an
-instance of the same-named controller. A model can be passed to this helper.</p>
+<p>Basically, the <code>{{control}}</code> helper render the named template in the current
+context using an instance of the same-named controller. A model can be passed to this helper.</p>
 
-<p>When a <code>control</code> helper is computed, it:</p>
+<p>When a <code>{{control}}</code> helper is computed, it:</p>
 
 <ul>
 <li>Generates a <code>child</code> of the current controllers container</li>
@@ -254,13 +265,13 @@ instance of the same-named controller. A model can be passed to this helper.</p>
 </ul>
 
 
-<p>Normally, <code>control</code> could be used multiple times with the same name.</p>
+<p>Normally, <code>{{control}}</code> could be used multiple times with the same name.</p>
 
-<p>In fact, it cannot work because when the <code>control</code> is rendered a second time, lookup the
-controller will return the controller which was instantiated on the first control. So the
-first model will be destroyed in favor of the last control model.</p>
+<p>In fact, it cannot work because when the <code>{{control}}</code> is rendered a second
+time, looking up the controller will return the controller which was instantiated on the first
+control. So the first model will be destroyed in favor of the last control model.</p>
 
-<p>That&#8217;s why there could be something new in containers: <strong>scopes</strong>. I suggest you to take a look at
+<p>That&#8217;s why a new feature could appear in containers: <strong>scopes</strong>. I suggest you to take a look at
 <em>@ghempton</em> comments in <a href="https://github.com/emberjs/ember.js/pull/1968#issuecomment-13137494">emberjs/emberjs#1968</a> if you want to know more.</p>
 ]]></content>
   </entry>
